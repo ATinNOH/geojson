@@ -1,0 +1,99 @@
+SELECT        T0.[ItemCode] AS 'Artikelnr.', T1.[ItemName] AS 'Artikelbeschreibung', T1.[FrgnName] AS 'Alte Art. Nr.', T2.[ItmsGrpNam] AS 'Artikelgruppe', 
+                         (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN U_Stueckzahl ELSE Quantity END) END) AS 'Menge', 
+                         (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN Quantity ELSE weight1 END) END) AS 'Gewicht', (T0.[LineTotal] * (100 - T5.discprcnt) / 100) AS 'Betrag', 
+                         T0.[NoInvtryMv] AS 'keine Mengenbewegung', T1.[QryGroup7] AS 'DSD Pflicht', T5.[DocDate] AS 'Buchungsdatum', /*T5=Kopf*/ T0.[ShipDate] AS 'Wareneingangsdatum', T5.[DocNum] AS 'Belegnr.', 
+                         IsNull(T3.[Country], T7.[CountryB]) AS 'Land', T3.[CardCode] AS 'GP-Nummer', T3.[CardName] AS 'GP-Name', /*T0=Zeilen*/ T6.[GroupName] AS 'Kundengruppe', T4.[ListName] AS 'Preisliste', 
+                         T9.[FirmName] AS 'Brand', CONCAT(T11.[descript], ' ', T10.[descript]) AS 'Gebiet', T5.[ShipToCode] AS 'Lieferadresse', T12.[SlpName] AS 'Vertriebsmitarbeiter', T0.[Commission] AS 'Provision %', 
+                         ((T0.[LineTotal] - T0.Linetotal * T5.discprcnt / 100) * T0.[Commission] / 100) AS 'Provisionsbetrag'
+FROM            [dbo].[INV1] T0 /*Rechnungszeilen*/ INNER JOIN
+                         [dbo].[OITM] T1 /*Artikel*/ ON T0.[ItemCode] = T1.[ItemCode] INNER JOIN
+                         [dbo].[OITB] T2 /*Artikelgruppe*/ ON T1.[ItmsGrpCod] = T2.[ItmsGrpCod] INNER JOIN
+                         OCRD T3 /*Geschäftspartner*/ ON T0.[BaseCard] = T3.[CardCode] INNER JOIN
+                         OPLN T4 /*Preisliste*/ ON T3.[ListNum] = T4.[ListNum] INNER JOIN
+                         OCRG T6 /*Kundengruppe*/ ON T3.[GroupCode] = T6.[GroupCode] INNER JOIN
+                         INV12 T7 /*Rechnungszeilen*/ ON T0.[DocEntry] = T7.[DocEntry] INNER JOIN
+                         OINV T5 /*Rechnungskopf*/ ON T0.[DocEntry] = T5.[DocEntry] INNER JOIN
+                         OMRC T9 /*Brand/Hersteller*/ ON T1.[FirmCode] = T9.[FirmCode] LEFT JOIN
+                         OTER T10 ON T3.[Territory] = T10.[territryID] LEFT JOIN
+                         OTER T11 ON T10.[parent] = T11.[territryID] INNER JOIN
+                         OSLP T12 ON T0.[SlpCode] = T12.[SlpCode]
+WHERE        T5.[DocDate] >= '20190501' AND T5.[canceled] = 'N' AND T1.itmsgrpcod NOT IN (167)
+UNION ALL
+/*ORIN+RIN1 (Gutschriften)*/ SELECT T0.[ItemCode] AS 'Artikelnr.', T1.[Itemname] AS 'Artikelbeschreibung', T1.[FrgnName] AS 'Alte Art. Nr.', T2.[ItmsGrpNam] AS 'Artikelgruppe', 
+                         (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN - U_Stueckzahl ELSE - Quantity END) END) AS 'Menge', 
+                         (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN - Quantity ELSE - weight1 END) END) AS 'Gewicht', - (T0.[LineTotal] * (100 - T5.discprcnt) / 100) AS 'Betrag', 
+                         T0.[NoInvtryMv] AS 'keine Mengenbewegung', T1.[QryGroup7] AS 'DSD Pflicht', T5.[DocDate] AS 'Buchungsdatum', /*T5=Kopf*/ T0.[ShipDate] AS 'Warenausgangsdatum', T5.[DocNum] AS 'Belegnr.', 
+                         IsNull(T3.[Country], T7.[CountryB]) AS 'Land', T3.[CardCode] AS 'GP-Nummer', T3.[CardName] AS 'GP-Name', /*T0=Zeilen*/ T6.[GroupName] AS 'Kundengruppe', T4.[ListName] AS 'Preisliste', 
+                         T9.[FirmName] AS 'Brand', CONCAT(T11.[descript], ' ', T10.[descript]) AS 'Gebiet', T5.[ShipToCode] AS 'Lieferadresse', T12.[SlpName] AS 'Vertriebsmitarbeiter', T0.[Commission] AS 'Provision %', 
+                         ((T0.[LineTotal] - T0.Linetotal * T5.discprcnt / 100) * T0.[Commission] / 100) AS 'Provisionsbetrag'
+FROM            [dbo].[RIN1] T0 /*Gutschriftszeile*/ INNER JOIN
+                         [dbo].[OITM] T1 /*Artikel*/ ON T0.[ItemCode] = T1.[ItemCode] INNER JOIN
+                         [dbo].[OITB] T2 /* Artikelgruppe*/ ON T1.[ItmsGrpCod] = T2.[ItmsGrpCod] INNER JOIN
+                         OCRD T3 /*Geschäftspartner*/ ON T0.[BaseCard] = T3.[CardCode] INNER JOIN
+                         OPLN T4 /*Preisliste*/ ON T3.[ListNum] = T4.[ListNum] INNER JOIN
+                         OCRG T6 /*Kundengruppe*/ ON T3.[GroupCode] = T6.[GroupCode] INNER JOIN
+                         RIN12 T7 /*Gutschriftszeile*/ ON T0.[DocEntry] = T7.[DocEntry] INNER JOIN
+                         ORIN T5 /*Gutschriften*/ ON T0.[DocEntry] = T5.[DocEntry] INNER JOIN
+                         OMRC T9 /*Brand/Hersteller*/ ON T1.[FirmCode] = T9.[FirmCode] LEFT JOIN
+                         OTER T10 ON T3.[Territory] = T10.[territryID] LEFT JOIN
+                         OTER T11 ON T10.[parent] = T11.[territryID] INNER JOIN
+                         OSLP T12 ON T0.[SlpCode] = T12.[SlpCode]
+WHERE        T5.[DocDate] >= '20190501' AND T5.[canceled] = 'N' AND T1.itmsgrpcod NOT IN (167)
+UNION ALL
+SELECT        T1.[ItemCode] AS 'Artikelnr.', T1.[itemname] AS 'Artikelbeschreibung', T1.[FrgnName] AS 'Alte Art. Nr.', T2.[ItmsGrpNam] AS 'Artikelgruppe', 
+                         (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN T0.U_Stueckzahl ELSE T0.Quantity END) END) * T8.quantity /
+                             (SELECT        sum(quantity)
+                               FROM            itt1
+                               WHERE        father = T0.itemcode) AS 'Menge', (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN T0.U_Stueckzahl ELSE T0.Quantity END) END) * T8.quantity /
+                             (SELECT        sum(quantity)
+                               FROM            itt1
+                               WHERE        father = T0.itemcode) * T1.sweight1 AS 'Gewicht', (T0.[LineTotal] * (100 - T5.discprcnt) / 100) * T8.quantity /
+                             (SELECT        sum(quantity)
+                               FROM            itt1
+                               WHERE        father = T0.itemcode) AS 'Betrag', T0.[NoInvtryMv] AS 'keine Mengenbewegung', T1.[QryGroup7] AS 'DSD Pflicht', T5.[DocDate] AS 'Buchungsdatum', 
+                         /*T5=Kopf*/ T0.[ShipDate] AS 'Wareneingangsdatum', T5.[DocNum] AS 'Belegnr.', IsNull(T3.[Country], T7.[CountryB]) AS 'Land', T3.[CardCode] AS 'GP-Nummer', T3.[CardName] AS 'GP-Name', 
+                         /*T0=Zeilen*/ T6.[GroupName] AS 'Kundengruppe', T4.[ListName] AS 'Preisliste', T9.[FirmName] AS 'Brand', CONCAT(T11.[descript], ' ', T10.[descript]) AS 'Gebiet', T5.[ShipToCode] AS 'Lieferadresse', 
+                         T12.[SlpName] AS 'Vertriebsmitarbeiter', T0.[Commission] AS 'Provision %', ((T0.[LineTotal] - T0.Linetotal * T5.discprcnt / 100) * T0.[Commission] / 100) AS 'Provisionsbetrag'
+FROM            [dbo].[INV1] T0 /*Rechnungszeilen*/ INNER JOIN
+                         itt1 T8 ON T8.father = T0.itemcode INNER JOIN
+                         [dbo].[OITM] T1 /*Artikel*/ ON T8.[code] = T1.[ItemCode] INNER JOIN
+                         [dbo].[OITB] T2 /*Artikelgruppe*/ ON T1.[ItmsGrpCod] = T2.[ItmsGrpCod] INNER JOIN
+                         OCRD T3 /*Geschäftspartner*/ ON T0.[BaseCard] = T3.[CardCode] INNER JOIN
+                         OPLN T4 /*Preisliste*/ ON T3.[ListNum] = T4.[ListNum] INNER JOIN
+                         OCRG T6 /*Kundengruppe*/ ON T3.[GroupCode] = T6.[GroupCode] INNER JOIN
+                         INV12 T7 /*Rechnungszeilen*/ ON T0.[DocEntry] = T7.[DocEntry] INNER JOIN
+                         OINV T5 /*Rechnungskopf*/ ON T0.[DocEntry] = T5.[DocEntry] INNER JOIN
+                         OMRC T9 /*Brand/Hersteller*/ ON T1.[FirmCode] = T9.[FirmCode] LEFT JOIN
+                         OTER T10 ON T3.[Territory] = T10.[territryID] LEFT JOIN
+                         OTER T11 ON T10.[parent] = T11.[territryID] INNER JOIN
+                         OSLP T12 ON T0.[SlpCode] = T12.[SlpCode]
+WHERE        T5.[DocDate] >= '20190501' AND T5.[canceled] = 'N'
+UNION ALL
+SELECT        T1.[ItemCode] AS 'Artikelnr.', T1.[itemname] AS 'Artikelbeschreibung', T1.[FrgnName] AS 'Alte Art. Nr.', T2.[ItmsGrpNam] AS 'Artikelgruppe', 
+                         (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN - T0.U_Stueckzahl ELSE - T0.Quantity END) END) * T8.quantity /
+                             (SELECT        sum(quantity)
+                               FROM            itt1
+                               WHERE        father = T0.itemcode) AS 'Menge', (CASE WHEN NoInvtryMv = 'N' THEN (CASE WHEN UOMCode = 'kg' THEN - T0.U_Stueckzahl ELSE - T0.Quantity END) END) * T8.quantity /
+                             (SELECT        sum(quantity)
+                               FROM            itt1
+                               WHERE        father = T0.itemcode) * T1.sweight1 AS 'Gewicht', - (T0.[LineTotal] * (100 - T5.discprcnt) / 100) * T8.quantity /
+                             (SELECT        sum(quantity)
+                               FROM            itt1
+                               WHERE        father = T0.itemcode) AS 'Betrag', T0.[NoInvtryMv] AS 'keine Mengenbewegung', T1.[QryGroup7] AS 'DSD Pflicht', T5.[DocDate] AS 'Buchungsdatum', 
+                         /*T5=Kopf*/ T0.[ShipDate] AS 'Wareneingangsdatum', T5.[DocNum] AS 'Belegnr.', IsNull(T3.[Country], T7.[CountryB]) AS 'Land', T3.[CardCode] AS 'GP-Nummer', T3.[CardName] AS 'GP-Name', 
+                         /*T0=Zeilen*/ T6.[GroupName] AS 'Kundengruppe', T4.[ListName] AS 'Preisliste', T9.[FirmName] AS 'Brand', CONCAT(T11.[descript], ' ', T10.[descript]) AS 'Gebiet', T5.[ShipToCode] AS 'Lieferadresse', 
+                         T12.[SlpName] AS 'Vertriebsmitarbeiter', T0.[Commission] AS 'Provision %', ((T0.[LineTotal] - T0.Linetotal * T5.discprcnt / 100) * T0.[Commission] / 100) AS 'Provisionsbetrag'
+FROM            [dbo].[rin1] T0 /*Rechnungszeilen*/ INNER JOIN
+                         itt1 T8 ON T8.father = T0.itemcode INNER JOIN
+                         [dbo].[OITM] T1 /*Artikel*/ ON T8.[code] = T1.[ItemCode] INNER JOIN
+                         [dbo].[OITB] T2 /*Artikelgruppe*/ ON T1.[ItmsGrpCod] = T2.[ItmsGrpCod] INNER JOIN
+                         OCRD T3 /*Geschäftspartner*/ ON T0.[BaseCard] = T3.[CardCode] INNER JOIN
+                         OPLN T4 /*Preisliste*/ ON T3.[ListNum] = T4.[ListNum] INNER JOIN
+                         OCRG T6 /*Kundengruppe*/ ON T3.[GroupCode] = T6.[GroupCode] INNER JOIN
+                         rin12 T7 /*Rechnungszeilen*/ ON T0.[DocEntry] = T7.[DocEntry] INNER JOIN
+                         Orin T5 /*Rechnungskopf*/ ON T0.[DocEntry] = T5.[DocEntry] INNER JOIN
+                         OMRC T9 /*Brand/Hersteller*/ ON T1.[FirmCode] = T9.[FirmCode] LEFT JOIN
+                         OTER T10 ON T3.[Territory] = T10.[territryID] LEFT JOIN
+                         OTER T11 ON T10.[parent] = T11.[territryID] INNER JOIN
+                         OSLP T12 ON T0.[SlpCode] = T12.[SlpCode]
+WHERE        T5.[DocDate] >= '20190501' AND T5.[canceled] = 'N' AND T1.itmsgrpcod NOT IN (167)
